@@ -1,0 +1,840 @@
+// This is your Prisma schema file for PABOS Enterprise.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================
+// Identity & Access (IAM)
+// ========================
+
+model Organisation {
+  id          String    @id @default(cuid())
+  name        String
+  legalName   String?
+  registrationNumber String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  branches    Branch[]
+  users       User[]
+  roles       Role[]
+  permissions Permission[]
+  clients     Client[]
+  consentRecords ConsentRecord[]
+  policies    Policy[]
+  claims      Claim[]
+  tasks       Task[]
+  activityCodes ActivityCode[]
+  knowledgeArticles KnowledgeArticle[]
+  knowledgeEmbeddings KnowledgeEmbedding[]
+  documents   Document[]
+  auditLogs   AuditLog[]
+  notifications Notification[]
+  insurers    Insurer[]
+  products    Product[]
+  slas        SLA[]
+
+  @@map("organisations")
+}
+
+model Branch {
+  id             String   @id @default(cuid())
+  organisationId String
+  name           String
+  code           String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  users          User[]
+  clients        Client[]
+  policies       Policy[]
+  claims         Claim[]
+  tasks          Task[]
+  documents      Document[]
+  auditLogs      AuditLog[]
+
+  @@unique([organisationId, code])
+  @@map("branches")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  organisationId      String
+  branchId            String?
+  email               String
+  passwordHash        String
+  firstName           String
+  lastName            String
+  isActive            Boolean   @default(true)
+  mfaEnabled          Boolean   @default(false)
+  mfaSecret           String?   // encrypted TOTP secret
+  emailVerifiedAt     DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  organisation        Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch              Branch?      @relation(fields: [branchId], references: [id])
+  userRoles           UserRole[]
+  refreshTokens       RefreshToken[]
+  taskAssignments     TaskAssignment[]
+  createdAuditLogs    AuditLog[]   @relation("CreatedBy")
+  notifications       Notification[]
+
+  @@unique([organisationId, email])
+  @@map("users")
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organisationId String
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  userRoles      UserRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([organisationId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id             String   @id @default(cuid())
+  organisationId String
+  resource       String
+  action         String
+  description    String?
+  createdAt      DateTime @default(now())
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+
+  @@unique([organisationId, resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ========================
+// CRM
+// ========================
+
+enum ClientType {
+  INDIVIDUAL
+  BUSINESS
+  TRUST
+  FLEET
+  MUNICIPALITY
+  SOE
+}
+
+enum IdType {
+  RSA_ID
+  PASSPORT
+  COMPANY_REG
+  TRUST_REG
+  OTHER
+}
+
+model Client {
+  id             String   @id @default(cuid())
+  organisationId String
+  branchId       String?
+  type           ClientType @default(INDIVIDUAL)
+  firstName      String?
+  lastName       String?
+  companyName    String?
+  email          String?
+  phone          String?
+  idNumber       String?
+  idType         IdType   @default(RSA_ID)
+  dateOfBirth    DateTime?
+  ficaVerified   Boolean  @default(false)
+  ficaVerifiedAt DateTime?
+  faisStatus     String?
+  addressLine1   String?
+  addressLine2   String?
+  suburb         String?
+  city           String?
+  province       String?
+  postalCode     String?
+  country        String   @default("ZA")
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
+  contacts       ClientContact[]
+  relationships  ClientRelationship[] @relation("ClientRelationships")
+  relatedTo      ClientRelationship[] @relation("RelatedClients")
+  consentRecords ConsentRecord[]
+  policies       Policy[]
+  claims         Claim[]
+  tasks          Task[]
+  documents      Document[]
+
+  @@index([organisationId])
+  @@index([organisationId, branchId])
+  @@map("clients")
+}
+
+model ClientContact {
+  id        String @id @default(cuid())
+  clientId  String
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  jobTitle  String?
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_contacts")
+}
+
+enum RelationshipType {
+  SPOUSE
+  PARENT
+  CHILD
+  BENEFICIARY
+  EMPLOYER
+  EMPLOYEE
+  BROKER_REP
+  DIRECTOR
+  SHAREHOLDER
+  RELATED_COMPANY
+  OTHER
+}
+
+model ClientRelationship {
+  id           String           @id @default(cuid())
+  clientId     String
+  relatedToId  String
+  relationship RelationshipType
+  notes        String?
+  createdAt    DateTime         @default(now())
+
+  client       Client @relation("ClientRelationships", fields: [clientId], references: [id], onDelete: Cascade)
+  relatedTo    Client @relation("RelatedClients", fields: [relatedToId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, relatedToId])
+  @@map("client_relationships")
+}
+
+enum ConsentPurpose {
+  MARKETING
+  CLAIMS_PROCESSING
+  UNDERWRITING
+  DATA_RETENTION
+  THIRD_PARTY_SHARING
+}
+
+model ConsentRecord {
+  id             String         @id @default(cuid())
+  organisationId String
+  clientId       String
+  purpose        ConsentPurpose
+  lawfulBasis    String         // e.g. consent, contract, legal_obligation
+  granted        Boolean        @default(true)
+  grantedAt      DateTime       @default(now())
+  withdrawnAt    DateTime?
+  channel        String?        // e.g. email, signed_form, phone
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("consent_records")
+}
+
+// ========================
+// Policy Administration
+// ========================
+
+enum PolicyStatus {
+  QUOTED
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+  RENEWED
+}
+
+enum LineOfBusiness {
+  MOTOR
+  HOME
+  COMMERCIAL
+  LIFE
+  MEDICAL_AID
+  EMPLOYEE_BENEFITS
+  LIABILITY
+  TRANSPORT
+  AGRICULTURE
+  SPECIALIST
+}
+
+model Insurer {
+  id             String   @id @default(cuid())
+  organisationId String
+  name           String
+  code           String
+  contactEmail   String?
+  contactPhone   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  products       Product[]
+  policies       Policy[]
+
+  @@unique([organisationId, code])
+  @@map("insurers")
+}
+
+model Product {
+  id             String       @id @default(cuid())
+  organisationId String
+  insurerId      String?
+  name           String
+  code           String
+  lineOfBusiness LineOfBusiness @default(MOTOR)
+  description    String?
+  coverAmountMin Decimal?     @db.Decimal(18, 2)
+  coverAmountMax Decimal?     @db.Decimal(18, 2)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  insurer        Insurer?     @relation(fields: [insurerId], references: [id])
+  policies       Policy[]
+
+  @@unique([organisationId, code])
+  @@map("products")
+}
+
+model Policy {
+  id             String       @id @default(cuid())
+  organisationId String
+  branchId       String?
+  clientId       String
+  insurerId      String?
+  productId      String?
+  policyNumber   String
+  lineOfBusiness LineOfBusiness @default(MOTOR)
+  status         PolicyStatus   @default(QUOTED)
+  inceptionDate  DateTime
+  expiryDate     DateTime
+  sumInsured     Decimal?     @db.Decimal(18, 2)
+  premium        Decimal?     @db.Decimal(18, 2)
+  excess         Decimal?     @db.Decimal(18, 2)
+  commissionRate Decimal?     @db.Decimal(5, 4)
+  brokerFee      Decimal?     @db.Decimal(18, 2)
+  paymentMethod  String?
+  paymentFrequency String?
+  riskAddressLine1 String?
+  riskAddressLine2 String?
+  riskSuburb     String?
+  riskCity       String?
+  riskProvince   String?
+  riskPostalCode String?
+  riskCountry    String       @default("ZA")
+  notes          String?
+  isDeleted      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  insurer        Insurer?     @relation(fields: [insurerId], references: [id])
+  product        Product?     @relation(fields: [productId], references: [id])
+  amendments     PolicyAmendment[]
+  policyDocuments PolicyDocument[]
+  claims         Claim[]
+  tasks          Task[]
+  documents      Document[]
+
+  @@unique([organisationId, policyNumber])
+  @@index([organisationId])
+  @@index([organisationId, branchId])
+  @@map("policies")
+}
+
+enum AmendmentType {
+  NEW_POLICY
+  ENDORSEMENT
+  RENEWAL
+  CANCELLATION
+  REINSTATEMENT
+}
+
+model PolicyAmendment {
+  id             String        @id @default(cuid())
+  policyId       String
+  organisationId String
+  branchId       String?
+  type           AmendmentType
+  subType        String?       // e.g. ADDRESS_CHANGE, ADD_VEHICLE, REMOVE_DRIVER
+  effectiveDate  DateTime
+  previousValues Json?
+  proposedValues Json?
+  reason         String?
+  status         String        @default("PENDING")
+  approvedById   String?
+  approvedAt     DateTime?
+  createdById    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  policy         Policy        @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([organisationId])
+  @@map("policy_amendments")
+}
+
+model PolicyDocument {
+  id        String   @id @default(cuid())
+  policyId  String
+  documentId String
+  role      String   // e.g. schedule, certificate, endorsement
+  createdAt DateTime @default(now())
+
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@map("policy_documents")
+}
+
+// ========================
+// Claims
+// ========================
+
+enum ClaimStatus {
+  REGISTERED
+  ACKNOWLEDGED
+  UNDER_INVESTIGATION
+  AWAITING_DOCUMENTS
+  APPROVED
+  PARTIALLY_APPROVED
+  REJECTED
+  SETTLED
+  CLOSED
+  REOPENED
+}
+
+model Claim {
+  id             String     @id @default(cuid())
+  organisationId String
+  branchId       String?
+  policyId       String
+  clientId       String
+  claimNumber    String     @unique
+  incidentDate   DateTime
+  reportedDate   DateTime   @default(now())
+  description    String?
+  status         ClaimStatus @default(REGISTERED)
+  reserveAmount  Decimal?   @db.Decimal(18, 2)
+  settledAmount  Decimal?   @db.Decimal(18, 2)
+  excessAmount   Decimal?   @db.Decimal(18, 2)
+  excessPaid     Boolean    @default(false)
+  assessorRef    String?
+  causeCode      String?
+  thirdPartyInvolved Boolean @default(false)
+  isDeleted      Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
+  policy         Policy       @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  statusHistory  ClaimStatusHistory[]
+  claimDocuments ClaimDocument[]
+  tasks          Task[]
+  documents      Document[]
+
+  @@index([organisationId])
+  @@index([organisationId, branchId])
+  @@map("claims")
+}
+
+model ClaimStatusHistory {
+  id          String      @id @default(cuid())
+  claimId     String
+  status      ClaimStatus
+  changedById String?
+  reason      String?
+  createdAt   DateTime    @default(now())
+
+  claim       Claim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@map("claim_status_history")
+}
+
+model ClaimDocument {
+  id         String   @id @default(cuid())
+  claimId    String
+  documentId String
+  role       String   // e.g. proof_of_loss, police_report, invoice, photo
+  createdAt  DateTime @default(now())
+
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@map("claim_documents")
+}
+
+// ========================
+// Workflow Engine
+// ========================
+
+model ActivityCode {
+  id             String   @id @default(cuid())
+  organisationId String
+  code           String
+  name           String
+  description    String?
+  lineOfBusiness LineOfBusiness?
+  defaultSlaMinutes Int?
+  department     String?
+  triggersTask   Boolean  @default(true)
+  requiresApproval Boolean @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+
+  @@unique([organisationId, code])
+  @@map("activity_codes")
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  organisationId String
+  branchId       String?
+  activityCodeId String?
+  clientId       String?
+  policyId       String?
+  claimId        String?
+  title          String
+  description    String?
+  status         TaskStatus @default(PENDING)
+  priority       TaskPriority @default(MEDIUM)
+  dueAt          DateTime?
+  completedAt    DateTime?
+  sourceType     String?    // e.g. MANUAL, AI_INTAKE, POLICY, CLAIM
+  sourceId       String?
+  metadata       Json?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
+  activityCode   ActivityCode? @relation(fields: [activityCodeId], references: [id])
+  client         Client?      @relation(fields: [clientId], references: [id])
+  policy         Policy?      @relation(fields: [policyId], references: [id])
+  claim          Claim?       @relation(fields: [claimId], references: [id])
+  assignments    TaskAssignment[]
+  slas           SLA[]
+
+  @@index([organisationId])
+  @@index([organisationId, branchId])
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id        String    @id @default(cuid())
+  taskId    String
+  userId    String
+  assignedById String?
+  assignedAt DateTime @default(now())
+  unassignedAt DateTime?
+  isPrimary Boolean  @default(true)
+
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("task_assignments")
+}
+
+enum SlaState {
+  WITHIN_SLA
+  AT_RISK
+  BREACHED
+  PAUSED
+}
+
+model SLA {
+  id             String   @id @default(cuid())
+  organisationId String
+  taskId         String
+  stage          String   // e.g. ACKNOWLEDGE, RESOLVE
+  slaMinutes     Int
+  startedAt      DateTime @default(now())
+  deadlineAt     DateTime
+  pausedAt       DateTime?
+  resumedAt      DateTime?
+  completedAt    DateTime?
+  state          SlaState @default(WITHIN_SLA)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  task           Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("slas")
+}
+
+// ========================
+// Knowledge Base
+// ========================
+
+enum KnowledgeCategory {
+  SOP
+  INSURER_RULE
+  PRODUCT_INFO
+  FAQ
+  REGULATORY
+  PROMPT
+  TRAINING
+}
+
+model KnowledgeArticle {
+  id             String            @id @default(cuid())
+  organisationId String
+  category       KnowledgeCategory
+  title          String
+  slug           String
+  content        String
+  tags           String[]
+  lineOfBusiness LineOfBusiness?
+  insurerId      String?
+  productId      String?
+  version        Int               @default(1)
+  isPublished    Boolean           @default(false)
+  publishedAt    DateTime?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  embeddings     KnowledgeEmbedding[]
+
+  @@unique([organisationId, slug])
+  @@map("knowledge_articles")
+}
+
+model KnowledgeEmbedding {
+  id             String   @id @default(cuid())
+  organisationId String
+  articleId      String
+  chunkIndex     Int
+  chunkText      String
+  // pgvector extension required for real vector storage; storing as JSON for portability in skeleton
+  vector         Json?
+  isStale        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  article        KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_embeddings")
+}
+
+// ========================
+// Audit & Notifications
+// ========================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  MFA_ENABLED
+  MFA_VERIFIED
+  MFA_FAILED
+  EXPORT
+  APPROVE
+  REJECT
+  VIEW
+}
+
+model AuditLog {
+  id             String     @id @default(cuid())
+  organisationId String?
+  branchId       String?
+  userId         String?
+  action         AuditAction
+  entityType     String     // e.g. Client, Policy, Claim
+  entityId       String?
+  payload        Json?
+  ipAddress      String?
+  userAgent      String?
+  correlationId  String?
+  createdAt      DateTime   @default(now())
+
+  organisation   Organisation? @relation(fields: [organisationId], references: [id])
+  branch         Branch?       @relation(fields: [branchId], references: [id])
+  createdBy      User?         @relation("CreatedBy", fields: [userId], references: [id])
+
+  @@index([organisationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model Notification {
+  id             String               @id @default(cuid())
+  organisationId String
+  userId         String?
+  recipientAddress String?
+  channel        NotificationChannel
+  subject        String?
+  body           String
+  status         NotificationStatus   @default(PENDING)
+  sentAt         DateTime?
+  error          String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organisationId])
+  @@index([status])
+  @@map("notifications")
+}
+
+// ========================
+// Documents
+// ========================
+
+enum DocumentClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+model Document {
+  id             String                 @id @default(cuid())
+  organisationId String
+  branchId       String?
+  clientId       String?
+  policyId       String?
+  claimId        String?
+  fileName       String
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String                 @unique
+  checksum       String?
+  classification DocumentClassification @default(INTERNAL)
+  retentionUntil DateTime?
+  uploadedById   String?
+  uploadedAt     DateTime               @default(now())
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
+  client         Client?      @relation(fields: [clientId], references: [id])
+  policy         Policy?      @relation(fields: [policyId], references: [id])
+  claim          Claim?       @relation(fields: [claimId], references: [id])
+
+  @@index([organisationId])
+  @@index([clientId])
+  @@index([policyId])
+  @@index([claimId])
+  @@map("documents")
+}
