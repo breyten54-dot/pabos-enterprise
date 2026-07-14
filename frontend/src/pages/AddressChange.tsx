@@ -9,7 +9,14 @@ import type { Policy } from '@/types'
 
 const schema = z.object({
   policyId: z.string().min(1, 'Select a policy'),
-  newAddress: z.string().min(5, 'Enter the full new address'),
+  effectiveDate: z.string().min(1, 'Effective date is required'),
+  newAddressLine1: z.string().min(1, 'Address line 1 is required'),
+  newAddressLine2: z.string().optional(),
+  newSuburb: z.string().optional(),
+  newCity: z.string().min(1, 'City is required'),
+  newProvince: z.string().optional(),
+  newPostalCode: z.string().min(1, 'Postal code is required'),
+  reason: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -33,7 +40,14 @@ export function AddressChange() {
   const mutation = useMutation<unknown, Error, FormData>({
     mutationFn: async (data) => {
       const response = await api.post(`/policies/${data.policyId}/endorsements/address-change`, {
-        newAddress: data.newAddress,
+        effectiveDate: data.effectiveDate,
+        newAddressLine1: data.newAddressLine1,
+        newAddressLine2: data.newAddressLine2,
+        newSuburb: data.newSuburb,
+        newCity: data.newCity,
+        newProvince: data.newProvince,
+        newPostalCode: data.newPostalCode,
+        reason: data.reason,
       })
       return response.data
     },
@@ -88,9 +102,49 @@ export function AddressChange() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">New Address</label>
-            <textarea rows={4} {...register('newAddress')} placeholder="Enter the full new residential or postal address" />
-            {errors.newAddress && <p className="text-red-400 text-xs mt-1">{errors.newAddress.message}</p>}
+            <label className="block text-sm font-medium text-slate-300 mb-1">Effective Date</label>
+            <input type="date" {...register('effectiveDate')} />
+            {errors.effectiveDate && <p className="text-red-400 text-xs mt-1">{errors.effectiveDate.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">New Address Line 1</label>
+            <input {...register('newAddressLine1')} placeholder="e.g. 1 Main Street" />
+            {errors.newAddressLine1 && <p className="text-red-400 text-xs mt-1">{errors.newAddressLine1.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Address Line 2 (optional)</label>
+            <input {...register('newAddressLine2')} placeholder="e.g. Suite 200" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Suburb (optional)</label>
+              <input {...register('newSuburb')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">City</label>
+              <input {...register('newCity')} />
+              {errors.newCity && <p className="text-red-400 text-xs mt-1">{errors.newCity.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Province (optional)</label>
+              <input {...register('newProvince')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Postal Code</label>
+              <input {...register('newPostalCode')} />
+              {errors.newPostalCode && <p className="text-red-400 text-xs mt-1">{errors.newPostalCode.message}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Reason (optional)</label>
+            <textarea rows={3} {...register('reason')} placeholder="Why is the address changing?" />
           </div>
 
           <div className="pt-2">

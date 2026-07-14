@@ -64,6 +64,22 @@ def run():
         page.wait_for_selector(f"text={policy_number}", timeout=10000)
         screenshot(page, "06_policies_after_create")
 
+        # Address change endorsement
+        page.goto(f"{BASE_URL}/endorsements/address-change")
+        page.wait_for_load_state("networkidle")
+        screenshot(page, "07_address_change")
+        addr_selects = page.locator("select")
+        addr_selects.nth(0).select_option(label=f"E2E Test — {policy_number} — MOTOR")
+        addr_inputs = page.locator("input")
+        addr_inputs.nth(0).fill("2026-08-01")
+        addr_inputs.nth(1).fill("2 New Avenue")
+        addr_inputs.nth(4).fill("Cape Town")
+        addr_inputs.nth(6).fill("8001")
+        page.locator("textarea").nth(0).fill("Client relocated")
+        page.get_by_role("button", name="Submit Endorsement").click()
+        page.wait_for_url("**/policies", timeout=10000)
+        screenshot(page, "08_policies_after_endorsement")
+
         print("E2E smoke test passed")
         browser.close()
 
