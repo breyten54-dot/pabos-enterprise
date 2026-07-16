@@ -44,6 +44,12 @@ services:
         value: 7d
       - key: TOTP_ISSUER
         value: PABOS
+      # Required by env validation; Redis itself is a stub (no server) — BullMQ
+      # retries in the background exactly as in the local demo setup.
+      - key: REDIS_HOST
+        value: localhost
+      - key: REDIS_PORT
+        value: "6379"
 
   - type: web
     name: pabos-staging
