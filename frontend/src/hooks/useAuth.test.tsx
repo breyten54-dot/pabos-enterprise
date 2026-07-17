@@ -83,7 +83,7 @@ describe('useAuth', () => {
     // @ts-expect-error — deleting a built-in is safe in this jsdom test context
     delete window.location
     const hrefStub = vi.fn()
-    window.location = { ...originalLocation, href: '' } as unknown as Location
+    window.location = { ...originalLocation, href: '' } as any
     Object.defineProperty(window.location, 'href', { set: hrefStub, get: () => '' })
 
     const { result } = renderHook(() => useAuth())
@@ -96,6 +96,6 @@ describe('useAuth', () => {
     expect(localStorage.getItem('pabos_access_token')).toBeNull()
     expect(hrefStub).toHaveBeenCalledWith('/login')
 
-    window.location = originalLocation
+    window.location = originalLocation as any
   })
 })
