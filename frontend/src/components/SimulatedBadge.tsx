@@ -4,11 +4,12 @@
  * these features render for illustration — this badge makes sure no viewer
  * can mistake them for live, regulated brokerage operations.
  *
- * Renders nothing in production: once the feature flags/integration flips
- * on for real, the badge disappears without a code change.
+ * Gates on an explicit per-deployment env var, NOT on `import.meta.env.PROD`,
+ * because a staging demo is a production build deployed to a non-production
+ * environment (BUILD-STANDARDS #21).
  */
 export function SimulatedBadge({ note }: { note?: string }) {
-  if (import.meta.env.PROD) return null
+  if (import.meta.env.VITE_APP_ENV === 'production') return null
 
   return (
     <div
