@@ -67,31 +67,31 @@ export function NewClient() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">First Name</label>
-              <input {...register('firstName')} />
+              <label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-1">First Name</label>
+              <input id="firstName" {...register('firstName')} />
               {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Last Name</label>
-              <input {...register('lastName')} />
+              <label htmlFor="lastName" className="block text-sm font-medium text-slate-300 mb-1">Last Name</label>
+              <input id="lastName" {...register('lastName')} />
               {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
-            <input type="email" {...register('email')} />
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Phone</label>
-              <input {...register('phone')} />
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-1">Phone</label>
+              <input id="phone" {...register('phone')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">ID Number</label>
-              <input {...register('idNumber')} />
+              <label htmlFor="idNumber" className="block text-sm font-medium text-slate-300 mb-1">ID Number</label>
+              <input id="idNumber" {...register('idNumber')} />
             </div>
           </div>
 

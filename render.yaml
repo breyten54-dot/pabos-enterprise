@@ -64,3 +64,7 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://pabos-staging-api.onrender.com/api/v1
+      # Staging is a production build but NOT the real production environment;
+      # the SIMULATED badge must remain visible here (BUILD-STANDARDS #21).
+      - key: VITE_APP_ENV
+        value: staging
