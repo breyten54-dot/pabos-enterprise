@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { Sparkles, Send, AlertCircle, CheckCircle2, Flag, ListTodo } from 'lucide-react'
+import { SimulatedBadge } from '@/components/SimulatedBadge'
 import api from '@/lib/api'
 import type { IntakeRequest, IntakeResponse } from '@/types'
 
@@ -39,6 +40,8 @@ export function AiIntake() {
           <Sparkles size={20} className="text-gold" />
           <h2 className="text-lg font-semibold text-gold">AI Intake</h2>
         </div>
+        <SimulatedBadge note="AI intake returns simulated demonstration outputs for the MVP demo." />
+
         <p className="text-slate-400 text-sm mb-4">
           Paste a client message below. The AI assistant will analyse it, suggest an activity code,
           highlight missing information, and draft a response. All outputs are advisory and require
