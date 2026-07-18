@@ -1,0 +1,5 @@
+# Force LF in the working tree for TypeScript sources regardless of the machine's
+# core.autocrlf, so Windows checkouts can't inject CRLF and create phantom prettier
+# "Delete ␍" diffs. See BUILD-STANDARDS #25.
+*.ts  text eol=lf
+*.tsx text eol=lf
