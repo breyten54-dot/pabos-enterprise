@@ -61,6 +61,9 @@ async function main() {
     { resource: 'report', action: 'executive' },
     { resource: 'knowledge', action: 'create' },
     { resource: 'knowledge', action: 'read' },
+    // Frontend route guard for /ai-intake requires 'ai:use' (App.tsx); the Admin role
+    // receives every permission in this list, so seeding it opens the page for the demo admin.
+    { resource: 'ai', action: 'use' },
   ];
 
   const permissions = await Promise.all(
