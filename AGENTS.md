@@ -24,8 +24,9 @@ user+Claude spec  →  Claude writes handover  →  KIMI BUILDS on a branch
 ## "sector" (aliases: "update", "check your handover") — the user's one-word trigger
 It is a TASK trigger, never a status question. Run this ONE command and follow its output
 (it fresh-reads your inbox and prints your proof header + active task + rules):
+From **HIVE root** (folder containing `Hand-Over central\` — cd there if your cwd is a subproject):
 ```
-node "C:/Users/Administrator/OneDrive/Desktop/HIVE/Hand-Over central/sector-kimi.js"
+node "Hand-Over central/sector-kimi.js"
 ```
 Your reply MUST start with the `⚡ SECTOR — …` header the script prints. Never answer from
 session memory — after compaction it is stale by definition (this has burned us three times).
