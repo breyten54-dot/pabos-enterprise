@@ -14,13 +14,17 @@ describe('PolicyAdminController (integration)', () => {
     findAll: jest.Mock;
     create: jest.Mock;
     addressChange: jest.Mock;
+    listRenewals: jest.Mock;
+    requestRenewal: jest.Mock;
   };
 
   beforeEach(async () => {
     policyAdminService = {
-      findAll: jest.fn().mockResolvedValue([{ id: 'policy-1' }]),
-      create: jest.fn().mockResolvedValue({ id: 'policy-1', status: 'ACTIVE' }),
-      addressChange: jest.fn().mockResolvedValue({ id: 'amendment-1' }),
+    findAll: jest.fn().mockResolvedValue([{ id: 'policy-1' }]),
+    create: jest.fn().mockResolvedValue({ id: 'policy-1', status: 'ACTIVE' }),
+    addressChange: jest.fn().mockResolvedValue({ id: 'amendment-1' }),
+    listRenewals: jest.fn().mockResolvedValue([{ id: 'policy-1', policyNumber: 'DEMO-0001' }]),
+    requestRenewal: jest.fn().mockResolvedValue({ id: 'renewal-1' }),
     };
 
     const testUser = {
@@ -130,6 +134,29 @@ describe('PolicyAdminController (integration)', () => {
         .expect(400);
 
       expect(policyAdminService.addressChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /policies/renewals', () => {
+    it('returns policies in the renewal window', async () => {
+      const res = await request(app.getHttpServer()).get('/policies/renewals').expect(200);
+      expect(res.body).toEqual([{ id: 'policy-1', policyNumber: 'DEMO-0001' }]);
+      expect(policyAdminService.listRenewals).toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /policies/:id/renewals', () => {
+    it('queues a renewal amendment', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/policies/policy-1/renewals')
+        .send({ reason: 'Window' })
+        .expect(201);
+      expect(res.body.id).toBe('renewal-1');
+      expect(policyAdminService.requestRenewal).toHaveBeenCalledWith(
+        'policy-1',
+        expect.objectContaining({ reason: 'Window' }),
+        expect.anything(),
+      );
     });
   });
 });

@@ -9,6 +9,8 @@ import {
   X,
   Building2,
   ChevronDown,
+  ClipboardList,
+  CalendarClock,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,6 +19,8 @@ import { hasPermission } from '@/lib/auth'
 const navItems = [
   { to: '/clients', label: 'Clients', icon: Users, permission: 'client:read' },
   { to: '/policies', label: 'Policies', icon: FileText, permission: 'policy:read' },
+  { to: '/claims', label: 'Claims', icon: ClipboardList, permission: 'claim:read' },
+  { to: '/renewals', label: 'Renewals', icon: CalendarClock, permission: 'policy:read' },
   { to: '/endorsements/address-change', label: 'Address Change', icon: MapPin, permission: 'policy:amend' },
   { to: '/ai-intake', label: 'AI Intake', icon: Sparkles, permission: 'ai:use' },
 ]

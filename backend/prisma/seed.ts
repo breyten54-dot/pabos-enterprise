@@ -362,6 +362,7 @@ async function main() {
       withProduct: true,
       sumInsured: 350000,
       premium: 1250.0,
+      expiryDate: new Date('2026-09-20'),
       notes: 'Synthetic demo policy (K-12) — motor comprehensive.',
     },
     {
@@ -371,6 +372,7 @@ async function main() {
       withProduct: false,
       sumInsured: 1200000,
       premium: 890.5,
+      expiryDate: new Date('2027-01-01'),
       notes: 'Synthetic demo policy (K-12) — home contents.',
     },
     {
@@ -380,6 +382,7 @@ async function main() {
       withProduct: false,
       sumInsured: 2500000,
       premium: 4300.75,
+      expiryDate: new Date('2027-01-01'),
       notes: 'Synthetic demo policy (K-12) — small business.',
     },
   ];
@@ -393,7 +396,7 @@ async function main() {
           policyNumber: p.policyNumber,
         },
       },
-      update: {},
+      update: { expiryDate: p.expiryDate },
       create: {
         organisationId: organisation.id,
         branchId: branch.id,
@@ -404,7 +407,7 @@ async function main() {
         lineOfBusiness: p.lineOfBusiness,
         status: 'ACTIVE',
         inceptionDate: new Date('2026-01-01'),
-        expiryDate: new Date('2027-01-01'),
+        expiryDate: p.expiryDate,
         sumInsured: p.sumInsured,
         premium: p.premium,
         riskCity: 'Durban',

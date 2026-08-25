@@ -48,6 +48,9 @@ describe('PolicyAdminService', () => {
       policyAmendment: {
         create: jest.fn().mockResolvedValue({ id: 'amendment-1' }),
       },
+      notification: {
+        create: jest.fn().mockResolvedValue({ id: 'note-1' }),
+      },
       $transaction: jest.fn().mockImplementation((ops) => Promise.all(ops)),
     };
 
@@ -276,6 +279,63 @@ describe('PolicyAdminService', () => {
           data: expect.objectContaining({ branchId: 'branch-1' }),
         }),
       );
+    });
+  });
+
+  describe('listRenewals', () => {
+    it('lists active policies in the expiry window', async () => {
+      prisma.policy.findMany.mockResolvedValueOnce([
+        { id: 'policy-1', policyNumber: 'DEMO-0001', expiryDate: new Date('2026-09-20') },
+      ]);
+      const result = await service.listRenewals(user, 90);
+      expect(prisma.policy.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            organisationId: 'org-1',
+            isDeleted: false,
+            status: PolicyStatus.ACTIVE,
+            expiryDate: expect.objectContaining({
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('requestRenewal', () => {
+    it('creates a RENEWAL amendment and an in-app notification', async () => {
+      prisma.policy.findFirst.mockResolvedValueOnce({
+        id: 'policy-1',
+        policyNumber: 'DEMO-0001',
+        expiryDate: new Date('2026-09-20'),
+        status: PolicyStatus.ACTIVE,
+        branchId: 'branch-1',
+        client: { firstName: 'Thabo', lastName: 'Demo' },
+      });
+
+      const result = await service.requestRenewal('policy-1', { reason: 'Window' }, user);
+
+      expect(prisma.policyAmendment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            policyId: 'policy-1',
+            type: AmendmentType.RENEWAL,
+            status: 'PENDING',
+          }),
+        }),
+      );
+      expect(prisma.notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-1',
+            relatedEntityType: 'Policy',
+          }),
+        }),
+      );
+      expect(result.id).toBe('amendment-1');
     });
   });
 });

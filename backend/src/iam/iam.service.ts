@@ -14,8 +14,11 @@ import * as QRCode from 'qrcode';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { AuditAction } from '@prisma/client';
+import { randomBytes, createHash } from 'crypto';
+import { AuditAction, NotificationChannel, NotificationStatus } from '@prisma/client';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 export interface TokenPair {
   accessToken: string;
@@ -113,6 +116,7 @@ export class IamService {
       if (!dto.totpCode) {
         return {
           mfaRequired: true,
+          requiresMfa: true,
           userId: user.id,
         };
       }
@@ -152,9 +156,86 @@ export class IamService {
 
     return {
       mfaRequired: false,
+      requiresMfa: false,
       ...tokens,
       user: this.toPayload(user),
     };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const generic = {
+      message: 'If an account exists, a reset link was queued.',
+    };
+    const user = await this.prisma.user.findFirst({
+      where: { email: dto.email, isActive: true },
+    });
+    if (!user) {
+      return generic;
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const passwordResetTokenHash = createHash('sha256').update(token).digest('hex');
+    const passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetTokenHash, passwordResetExpiresAt },
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        organisationId: user.organisationId,
+        userId: user.id,
+        recipientAddress: user.email,
+        channel: NotificationChannel.EMAIL,
+        subject: 'Password reset',
+        body: `SMTP is not configured. Use this reset token within 1 hour: ${token}`,
+        status: NotificationStatus.PENDING,
+        relatedEntityType: 'User',
+        relatedEntityId: user.id,
+      },
+    });
+
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      payload: { reason: 'password_reset_requested' },
+    });
+
+    return generic;
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const passwordResetTokenHash = createHash('sha256').update(dto.token).digest('hex');
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash,
+        passwordResetExpiresAt: { gt: new Date() },
+      },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    await this.auditService.log({
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      payload: { reason: 'password_reset_completed' },
+    });
+
+    return { message: 'Password updated' };
   }
 
   async refresh(dto: RefreshDto) {

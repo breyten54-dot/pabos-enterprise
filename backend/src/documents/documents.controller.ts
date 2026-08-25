@@ -32,9 +32,20 @@ export class DocumentsController {
     @Query('clientId') clientId?: string,
     @Query('policyId') policyId?: string,
     @Query('claimId') claimId?: string,
-    @CurrentUser() user?: CurrentUserPayload,
+    @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.documentsService.uploadStub(file, { clientId, policyId, claimId }, user);
+  }
+
+  @Get()
+  @RequirePermission('client:read')
+  list(
+    @Query('clientId') clientId?: string,
+    @Query('policyId') policyId?: string,
+    @Query('claimId') claimId?: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.documentsService.list({ clientId, policyId, claimId }, user);
   }
 
   @Get(':storageKey/download')

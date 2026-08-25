@@ -11,6 +11,7 @@ import { AuditModule } from './audit/audit.module';
 import { IamModule } from './iam/iam.module';
 import { CrmModule } from './crm/crm.module';
 import { PolicyAdminModule } from './policy-admin/policy-admin.module';
+import { ClaimsModule } from './claims/claims.module';
 import { DocumentsModule } from './documents/documents.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WorkflowEngineModule } from './workflow-engine/workflow-engine.module';
@@ -47,6 +48,7 @@ const notificationsQueueEnabled = process.env.NOTIFICATIONS_QUEUE_ENABLED !== 'f
     IamModule,
     CrmModule,
     PolicyAdminModule,
+    ClaimsModule,
     DocumentsModule,
     ...(notificationsQueueEnabled ? [NotificationsModule] : []),
     WorkflowEngineModule,

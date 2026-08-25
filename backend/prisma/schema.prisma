@@ -76,6 +76,8 @@ model User {
   isActive            Boolean   @default(true)
   mfaEnabled          Boolean   @default(false)
   mfaSecret           String?   // encrypted TOTP secret
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
   emailVerifiedAt     DateTime?
   lastLoginAt         DateTime?
   createdAt           DateTime  @default(now())
@@ -90,6 +92,7 @@ model User {
   notifications       Notification[]
 
   @@unique([organisationId, email])
+  @@index([passwordResetTokenHash])
   @@map("users")
 }
 

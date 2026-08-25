@@ -4,7 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { AddressChangeDto } from './dto/address-change.dto';
-import { AuditAction, AmendmentType, PolicyStatus } from '@prisma/client';
+import { AuditAction, AmendmentType, PolicyStatus, NotificationChannel, NotificationStatus } from '@prisma/client';
 
 @Injectable()
 export class PolicyAdminService {
@@ -130,6 +130,74 @@ export class PolicyAdminService {
       entityId: amendment.id,
       user,
       payload: { policyId: id, subType: 'ADDRESS_CHANGE' },
+    });
+
+    return amendment;
+  }
+
+  async listRenewals(user: CurrentUserPayload, days = 90) {
+    const now = new Date();
+    const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    return this.prisma.policy.findMany({
+      where: {
+        organisationId: user.organisationId,
+        ...(user.branchId ? { branchId: user.branchId } : {}),
+        isDeleted: false,
+        status: PolicyStatus.ACTIVE,
+        expiryDate: { gte: now, lte: until },
+      },
+      include: { client: { select: { firstName: true, lastName: true } } },
+      orderBy: { expiryDate: 'asc' },
+    });
+  }
+
+  async requestRenewal(id: string, dto: { reason?: string }, user: CurrentUserPayload) {
+    const policy = await this.prisma.policy.findFirst({
+      where: {
+        id,
+        organisationId: user.organisationId,
+        ...(user.branchId ? { branchId: user.branchId } : {}),
+        isDeleted: false,
+      },
+      include: { client: { select: { firstName: true, lastName: true } } },
+    });
+    if (!policy) throw new NotFoundException('Policy not found');
+
+    const amendment = await this.prisma.policyAmendment.create({
+      data: {
+        policyId: policy.id,
+        organisationId: user.organisationId,
+        branchId: user.branchId ?? policy.branchId,
+        type: AmendmentType.RENEWAL,
+        effectiveDate: policy.expiryDate,
+        previousValues: { expiryDate: policy.expiryDate, status: policy.status },
+        proposedValues: { type: 'RENEWAL' },
+        reason: dto.reason ?? `Renewal queued for ${policy.policyNumber}`,
+        status: 'PENDING',
+        createdById: user.userId,
+      },
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        organisationId: user.organisationId,
+        userId: user.userId,
+        recipientAddress: user.email,
+        channel: NotificationChannel.IN_APP,
+        subject: `Renewal window: ${policy.policyNumber}`,
+        body: `Policy ${policy.policyNumber} expires ${policy.expiryDate.toISOString().slice(0, 10)}. A RENEWAL amendment was queued.`,
+        status: NotificationStatus.PENDING,
+        relatedEntityType: 'Policy',
+        relatedEntityId: policy.id,
+      },
+    });
+
+    await this.auditService.log({
+      action: AuditAction.CREATE,
+      entityType: 'PolicyAmendment',
+      entityId: amendment.id,
+      user,
+      payload: { policyId: policy.id, type: AmendmentType.RENEWAL },
     });
 
     return amendment;

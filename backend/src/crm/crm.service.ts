@@ -84,6 +84,7 @@ export class CrmService {
         consentRecords: { orderBy: { createdAt: 'desc' } },
         policies: { take: 10, orderBy: { createdAt: 'desc' } },
         claims: { take: 10, orderBy: { createdAt: 'desc' } },
+        documents: { take: 20, orderBy: { uploadedAt: 'desc' } },
       },
     });
   }

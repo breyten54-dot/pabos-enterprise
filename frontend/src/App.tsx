@@ -3,6 +3,8 @@ import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Login } from '@/pages/Login'
 import { Mfa } from '@/pages/Mfa'
+import { ForgotPassword } from '@/pages/ForgotPassword'
+import { ResetPassword } from '@/pages/ResetPassword'
 import { Clients } from '@/pages/Clients'
 import { NewClient } from '@/pages/NewClient'
 import { ClientDetail } from '@/pages/ClientDetail'
@@ -10,6 +12,9 @@ import { Policies } from '@/pages/Policies'
 import { NewPolicy } from '@/pages/NewPolicy'
 import { AddressChange } from '@/pages/AddressChange'
 import { AiIntake } from '@/pages/AiIntake'
+import { Claims } from '@/pages/Claims'
+import { NewClaim } from '@/pages/NewClaim'
+import { Renewals } from '@/pages/Renewals'
 import { useAuth } from '@/hooks/useAuth'
 
 function AuthenticatedLayout({ children, permission }: { children: React.ReactNode; permission: string }) {
@@ -35,6 +40,8 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/mfa" element={<Mfa />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route
         path="/clients"
@@ -92,6 +99,31 @@ function App() {
         element={
           <AuthenticatedLayout permission="ai:use">
             <AiIntake />
+          </AuthenticatedLayout>
+        }
+      />
+
+      <Route
+        path="/claims"
+        element={
+          <AuthenticatedLayout permission="claim:read">
+            <Claims />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/claims/new"
+        element={
+          <AuthenticatedLayout permission="claim:create">
+            <NewClaim />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/renewals"
+        element={
+          <AuthenticatedLayout permission="policy:read">
+            <Renewals />
           </AuthenticatedLayout>
         }
       />
