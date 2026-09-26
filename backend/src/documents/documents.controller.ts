@@ -29,10 +29,10 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file'))
   upload(
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: CurrentUserPayload,
     @Query('clientId') clientId?: string,
     @Query('policyId') policyId?: string,
     @Query('claimId') claimId?: string,
-    @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.documentsService.uploadStub(file, { clientId, policyId, claimId }, user);
   }
@@ -40,10 +40,10 @@ export class DocumentsController {
   @Get()
   @RequirePermission('client:read')
   list(
+    @CurrentUser() user: CurrentUserPayload,
     @Query('clientId') clientId?: string,
     @Query('policyId') policyId?: string,
     @Query('claimId') claimId?: string,
-    @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.documentsService.list({ clientId, policyId, claimId }, user);
   }
